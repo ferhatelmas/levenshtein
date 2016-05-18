@@ -1,5 +1,7 @@
 package levenshtein
 
+import "unicode/utf8"
+
 // D is the levenshtein distance calculator interface
 type D interface {
 	// Dist calculates levenshtein distance between two utf-8 encoded strings
@@ -18,18 +20,19 @@ type calculator struct {
 
 // https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#C
 func (c *calculator) Dist(s1, s2 string) int {
-	r1, r2 := []rune(s1), []rune(s2)
-	l := len(r1)
+	l := utf8.RuneCountInString(s1)
 	m := make([]int, l+1)
-	for y := 1; y <= l; y++ {
-		m[y] = y * c.indel
+	for i := 1; i <= l; i++ {
+		m[i] = i * c.indel
 	}
-	var lastdiag int
-	for x, rx := range r2 {
-		m[0], lastdiag = (x+1)*c.indel, x*c.indel
-		for y, ry := range r1 {
-			m[y+1], lastdiag = min3(m[y+1]+c.indel, m[y]+c.indel, lastdiag+c.subCost(rx, ry)), m[y+1]
+	lastdiag, x, y := 0, 1, 1
+	for _, rx := range s2 {
+		m[0], lastdiag, y = x*c.indel, (x-1)*c.indel, 1
+		for _, ry := range s1 {
+			m[y], lastdiag = min3(m[y]+c.indel, m[y-1]+c.indel, lastdiag+c.subCost(rx, ry)), m[y]
+			y++
 		}
+		x++
 	}
 	return m[l]
 }
